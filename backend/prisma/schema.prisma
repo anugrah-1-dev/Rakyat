@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id                    Int                       @id @default(autoincrement())
+  name                  String
+  email                 String                    @unique
+  password              String
+  role                  String                    @default("admin")
+  verifiedAspirations   Aspiration[]              @relation("AspirationVerifier")
+  statusHistoryEntries  AspirationStatusHistory[]
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+}
+
+model Province {
+  id          Int          @id @default(autoincrement())
+  code        String       @unique
+  name        String
+  regencies   Regency[]
+  aspirations Aspiration[]
+}
+
+model Regency {
+  id          Int          @id @default(autoincrement())
+  code        String       @unique
+  name        String
+  provinceId  Int
+  province    Province     @relation(fields: [provinceId], references: [id], onDelete: Restrict)
+  districts   District[]
+  aspirations Aspiration[]
+
+  @@index([provinceId])
+}
+
+model District {
+  id          Int          @id @default(autoincrement())
+  code        String       @unique
+  name        String
+  regencyId   Int
+  regency     Regency      @relation(fields: [regencyId], references: [id], onDelete: Restrict)
+  villages    Village[]
+  aspirations Aspiration[]
+
+  @@index([regencyId])
+}
+
+model Village {
+  id          Int          @id @default(autoincrement())
+  code        String       @unique
+  name        String
+  districtId  Int
+  district    District     @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  aspirations Aspiration[]
+
+  @@index([districtId])
+}
+
+model Category {
+  id          Int          @id @default(autoincrement())
+  name        String
+  slug        String       @unique
+  description String?
+  color       String?
+  icon        String?
+  aspirations Aspiration[]
+}
+
+model Aspiration {
+  id                Int                       @id @default(autoincrement())
+  trackingCode      String                    @unique
+  phone             String
+  maskedPhone       String
+  phoneVerified     Boolean                   @default(false)
+  title             String
+  content           String
+  categoryId        Int
+  category          Category                  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  provinceId        Int
+  province          Province                  @relation(fields: [provinceId], references: [id], onDelete: Restrict)
+  regencyId         Int
+  regency           Regency                   @relation(fields: [regencyId], references: [id], onDelete: Restrict)
+  districtId        Int
+  district          District                  @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  villageId         Int
+  village           Village                   @relation(fields: [villageId], references: [id], onDelete: Restrict)
+  latitude          Float
+  longitude         Float
+  status            String                    @default("MENUNGGU_VERIFIKASI")
+  adminNote         String?
+  evidenceImage     String?
+  verifiedByAdminId Int?
+  verifiedByAdmin   Admin?                    @relation("AspirationVerifier", fields: [verifiedByAdminId], references: [id], onDelete: SetNull)
+  statusHistory     AspirationStatusHistory[]
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  @@index([categoryId])
+  @@index([provinceId, regencyId, districtId, villageId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AspirationStatusHistory {
+  id           Int        @id @default(autoincrement())
+  aspirationId Int
+  aspiration   Aspiration @relation(fields: [aspirationId], references: [id], onDelete: Cascade)
+  oldStatus    String?
+  newStatus    String
+  note         String?
+  adminId      Int?
+  admin        Admin?     @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  createdAt    DateTime   @default(now())
+
+  @@index([aspirationId, createdAt])
+  @@index([adminId])
+}
