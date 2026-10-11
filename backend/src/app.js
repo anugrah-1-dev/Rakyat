@@ -15,7 +15,7 @@ const env = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   frontendUrls: (process.env.FRONTEND_URL || 'http://localhost:5173')
     .split(',')
-    .map((url) => url.trim())
+    .map((url) => url.trim().replace(/\/+$/, ''))
     .filter(Boolean)
 };
 
@@ -55,11 +55,14 @@ const optionalDate = z.preprocess(
   z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal harus berformat YYYY-MM-DD.').optional()
 );
 
+app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use(cors({
   credentials: true,
   origin(origin, callback) {
-    if (!origin || env.frontendUrls.includes(origin)) return callback(null, true);
+    if (!origin) return callback(null, true);
+    const normalized = origin.replace(/\/+$/, '');
+    if (env.frontendUrls.includes(normalized)) return callback(null, true);
     return callback(new HttpError(403, 'Origin tidak diizinkan oleh CORS.'));
   }
 }));
